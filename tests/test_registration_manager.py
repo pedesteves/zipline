@@ -1,14 +1,9 @@
 from zipline.extensions import Registry
 from zipline.testing.fixtures import ZiplineTestCase
-from zipline.testing.predicates import (
-    assert_equal,
-    assert_is,
-    assert_raises_str,
-    assert_true,
-)
+from zipline.testing.predicates import assert_raises_str, assert_true
 
 
-class FakeInterface():
+class FakeInterface(object):
     pass
 
 
@@ -16,10 +11,9 @@ class RegistrationManagerTestCase(ZiplineTestCase):
 
     def test_load_not_registered(self):
         rm = Registry(FakeInterface)
-        assert_equal(rm.get_registered_classes(), {})
 
         msg = (
-            "no FakeInterface class registered under name 'ayy-lmao', "
+            "no FakeInterface factory registered under name 'ayy-lmao', "
             "options are: []"
         )
         with assert_raises_str(ValueError, msg):
@@ -31,7 +25,7 @@ class RegistrationManagerTestCase(ZiplineTestCase):
         rm.register('a', FakeInterface)
 
         msg = (
-            "no FakeInterface class registered under name 'ayy-lmao', "
+            "no FakeInterface factory registered under name 'ayy-lmao', "
             "options are: ['a', 'b', 'c']"
         )
         with assert_raises_str(ValueError, msg):
@@ -39,99 +33,87 @@ class RegistrationManagerTestCase(ZiplineTestCase):
 
     def test_register_decorator(self):
         rm = Registry(FakeInterface)
-        assert_equal(rm.get_registered_classes(), {})
 
         @rm.register('ayy-lmao')
         class ProperDummyInterface(FakeInterface):
             pass
 
-        expected_classes = {'ayy-lmao': ProperDummyInterface}
-        assert_equal(rm.get_registered_classes(), expected_classes)
-        assert_is(rm.load('ayy-lmao'), ProperDummyInterface)
-        assert_true(
-            rm.class_registered('ayy-lmao'),
-            "Class ProperDummyInterface wasn't properly registered under"
-            "name 'ayy-lmao'"
-        )
+        def check_registered():
+            assert_true(
+                rm.is_registered('ayy-lmao'),
+                "Class ProperDummyInterface wasn't properly registered under"
+                "name 'ayy-lmao'"
+            )
+            self.assertIsInstance(rm.load('ayy-lmao'), ProperDummyInterface)
 
-        msg = "FakeInterface class 'ayy-lmao' is already registered"
-        with assert_raises_str(ValueError, msg):
+        # Check that we successfully registered.
+        check_registered()
+
+        # Try and fail to register with the same key again.
+        m = "FakeInterface factory with name 'ayy-lmao' is already registered"
+        with assert_raises_str(ValueError, m):
             @rm.register('ayy-lmao')
             class Fake(object):
                 pass
 
-        msg = "The class specified is not a subclass of FakeInterface"
-        with assert_raises_str(TypeError, msg):
-            @rm.register('something-different')
-            class ImproperDummyInterface(object):
-                pass
+        # check that the failed registration didn't break the previous
+        # registration
+        check_registered()
 
-        # ensure that the failed registration didn't break the previously
-        # registered interface class
-        assert_equal(rm.get_registered_classes(), expected_classes)
-        assert_is(rm.load('ayy-lmao'), ProperDummyInterface)
-
+        # Unregister the key and assert that the key is now gone.
         rm.unregister('ayy-lmao')
-        assert_equal(rm.get_registered_classes(), {})
 
         msg = (
-            "no FakeInterface class registered under name 'ayy-lmao', "
+            "no FakeInterface factory registered under name 'ayy-lmao', "
             "options are: []"
         )
         with assert_raises_str(ValueError, msg):
             rm.load('ayy-lmao')
 
-        msg = "FakeInterface class 'ayy-lmao' was not already registered"
+        msg = "FakeInterface factory 'ayy-lmao' was not already registered"
         with assert_raises_str(ValueError, msg):
             rm.unregister('ayy-lmao')
 
     def test_register_non_decorator(self):
         rm = Registry(FakeInterface)
-        assert_equal(rm.get_registered_classes(), {})
 
         class ProperDummyInterface(FakeInterface):
             pass
 
         rm.register('ayy-lmao', ProperDummyInterface)
 
-        expected_classes = {'ayy-lmao': ProperDummyInterface}
-        assert_equal(rm.get_registered_classes(), expected_classes)
-        assert_is(rm.load('ayy-lmao'), ProperDummyInterface)
-        assert_true(
-            rm.class_registered('ayy-lmao'),
-            "Class ProperDummyInterface wasn't properly registered under"
-            "name 'ayy-lmao'"
-        )
+        def check_registered():
+            assert_true(
+                rm.is_registered('ayy-lmao'),
+                "Class ProperDummyInterface wasn't properly registered under"
+                "name 'ayy-lmao'"
+            )
+            self.assertIsInstance(rm.load('ayy-lmao'), ProperDummyInterface)
+
+        # Check that we successfully registered.
+        check_registered()
 
         class Fake(object):
             pass
 
-        msg = "FakeInterface class 'ayy-lmao' is already registered"
-        with assert_raises_str(ValueError, msg):
+        # Try and fail to register with the same key again.
+        m = "FakeInterface factory with name 'ayy-lmao' is already registered"
+        with assert_raises_str(ValueError, m):
             rm.register('ayy-lmao', Fake)
 
-        class ImproperDummyInterface(object):
-            pass
-
-        msg = "The class specified is not a subclass of FakeInterface"
-        with assert_raises_str(TypeError, msg):
-            rm.register('something-different', ImproperDummyInterface)
-
-        # ensure that the failed registration didn't break the previously
-        # registered interface class
-        assert_equal(rm.get_registered_classes(), expected_classes)
-        assert_is(rm.load('ayy-lmao'), ProperDummyInterface)
+        # check that the failed registration didn't break the previous
+        # registration
+        check_registered()
 
         rm.unregister('ayy-lmao')
-        assert_equal(rm.get_registered_classes(), {})
 
         msg = (
-            "no FakeInterface class registered under name 'ayy-lmao', "
+            "no FakeInterface factory registered under name 'ayy-lmao', "
             "options are: []"
         )
         with assert_raises_str(ValueError, msg):
             rm.load('ayy-lmao')
 
-        msg = "FakeInterface class 'ayy-lmao' was not already registered"
+        msg = "FakeInterface factory 'ayy-lmao' was not already registered"
         with assert_raises_str(ValueError, msg):
             rm.unregister('ayy-lmao')

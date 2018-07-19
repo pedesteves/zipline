@@ -8,12 +8,11 @@ from six import text_type
 
 import zipline
 from zipline.data import bundles as bundles_module
-from zipline.finance.blotter import Blotter
 from trading_calendars import get_calendar
 from zipline.utils.compat import wraps
 from zipline.utils.cli import Date, Timestamp
 from zipline.utils.run_algo import _run, load_extensions
-from zipline.extensions import create_args, get_registry
+from zipline.extensions import create_args
 
 try:
     __IPYTHON__
@@ -202,10 +201,10 @@ def ipython_only(option):
     ' extension.py.',
 )
 @click.option(
-    '--blotter-class',
-    type=click.Choice(list(get_registry(Blotter).get_registered_classes())),
+    '--blotter',
     default='default',
-    help="The subclass of Blotter to use, defaults to 'default'",
+    help="The blotter to use.",
+    show_default=True,
 )
 @ipython_only(click.option(
     '--local-namespace/--no-local-namespace',
@@ -229,7 +228,7 @@ def run(ctx,
         print_algo,
         metrics_set,
         local_namespace,
-        blotter_class):
+        blotter):
     """Run a backtest for the given algorithm.
     """
     # check that the start and end dates are passed correctly
@@ -263,7 +262,6 @@ def run(ctx,
         defines=define,
         data_frequency=data_frequency,
         capital_base=capital_base,
-        data=None,
         bundle=bundle,
         bundle_timestamp=bundle_timestamp,
         start=start,
@@ -274,7 +272,8 @@ def run(ctx,
         metrics_set=metrics_set,
         local_namespace=local_namespace,
         environ=os.environ,
-        blotter_class=blotter_class,
+        blotter=blotter,
+        benchmark_returns=None,
     )
 
     if output == '-':
