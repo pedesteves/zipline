@@ -22,6 +22,7 @@ from zipline.errors import (
     NonSliceableTerm,
     NonWindowSafeInput,
     NotDType,
+    NonPipelineInputs,
     TermInputsNotSpecified,
     TermOutputsEmpty,
     UnsupportedDType,
@@ -468,6 +469,13 @@ class ComputableTerm(Term):
             # normalize to a tuple so that inputs is hashable.
             inputs = tuple(inputs)
 
+            # Make sure all our inputs are valid pipeline objects before trying
+            # to infer a domain.
+            for input_ in inputs:
+                non_terms = [t for t in inputs if not isinstance(t, Term)]
+                if non_terms:
+                    raise NonPipelineInputs(cls.__name__, non_terms)
+
         if outputs is NotSpecified:
             outputs = cls.outputs
         if outputs is not NotSpecified:
@@ -550,7 +558,7 @@ class ComputableTerm(Term):
             # This isn't user error, this is a bug in our code.
             raise AssertionError("{term} has no mask".format(term=self))
 
-        if self.window_length:
+        if self.window_length > 1:
             for child in self.inputs:
                 if not child.window_safe:
                     raise NonWindowSafeInput(parent=self, child=child)
